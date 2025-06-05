@@ -1,154 +1,143 @@
+using System.Collections;
+using UnityEngine;
 
-+using System.Collections;
-+using System.Collections.Generic;
-+using UnityEngine;
-+
-+public class EnemyController : MonoBehaviour
-+{
-+    public Rigidbody2D rigidbody { get; private set; }
-+    private Vector2 direction = Vector2.down;
-+
-+    [Header("Movement")]
-+    public float speed = 3f;
-+    public float decisionTime = 2f;
-+    public float followRange = 5f;
-+    public float deathTime = 1.25f;
-+
-+    [Header("Animations")]
-+    public AnimatedSpriteRenderer spriteRendererUp;
-+    public AnimatedSpriteRenderer spriteRendererDown;
-+    public AnimatedSpriteRenderer spriteRendererLeft;
-+    public AnimatedSpriteRenderer spriteRendererRight;
-+    public AnimatedSpriteRenderer spriteRendererDead;
-+
-+    private AnimatedSpriteRenderer activeSpriteRenderer;
-+    private Transform target;
-+
-+    private void Awake()
-+    {
-+        rigidbody = GetComponent<Rigidbody2D>();
-+        activeSpriteRenderer = spriteRendererDown;
-+        GameObject player = GameObject.FindGameObjectWithTag("Player");
-+        if (player != null)
-+        {
-+            target = player.transform;
-+        }
-+    }
-+
-+    private void OnEnable()
-+    {
-+        StartCoroutine(ChooseDirection());
-+    }
-+
-+    private void Update()
-+    {
-+        // Movement direction affects which animation is active
-+        if (direction == Vector2.up)
-+        {
-+            SetDirection(direction, spriteRendererUp);
-+        }
-+        else if (direction == Vector2.down)
-+        {
-+            SetDirection(direction, spriteRendererDown);
-+        }
-+        else if (direction == Vector2.left)
-+        {
-+            SetDirection(direction, spriteRendererLeft);
-+        }
-+        else if (direction == Vector2.right)
-+        {
-+            SetDirection(direction, spriteRendererRight);
-+        }
-+        else
-+        {
-+            SetDirection(Vector2.zero, activeSpriteRenderer);
-+        }
-+    }
-+
-+    private void FixedUpdate()
-+    {
-+        Vector2 position = rigidbody.position;
-+        Vector2 translation = direction * speed * Time.fixedDeltaTime;
-+        rigidbody.MovePosition(position + translation);
-+    }
-+
-+    private IEnumerator ChooseDirection()
-+    {
-+        while (enabled)
-+        {
-+            yield return new WaitForSeconds(decisionTime);
-+            Vector2 newDir = Vector2.zero;
-+
-+            if (target != null && Vector2.Distance(transform.position, target.position) <= followRange)
-+            {
-+                Vector2 diff = (target.position - transform.position).normalized;
-+                if (Mathf.Abs(diff.x) > Mathf.Abs(diff.y))
-+                {
-+                    newDir = diff.x > 0 ? Vector2.right : Vector2.left;
-+                }
-+                else
-+                {
-+                    newDir = diff.y > 0 ? Vector2.up : Vector2.down;
-+                }
-+            }
-+            else
-+            {
-+                int rand = Random.Range(0, 4);
-+                switch (rand)
-+                {
-+                    case 0:
-+                        newDir = Vector2.up;
-+                        break;
-+                    case 1:
-+                        newDir = Vector2.down;
-+                        break;
-+                    case 2:
-+                        newDir = Vector2.left;
-+                        break;
-+                    case 3:
-+                        newDir = Vector2.right;
-+                        break;
-+                }
-+            }
-+
-+            direction = newDir;
-+        }
-+    }
-+
-+    private void SetDirection(Vector2 newDir, AnimatedSpriteRenderer currentSpriteRenderer)
-+    {
-+        direction = newDir;
-+        spriteRendererUp.enabled = currentSpriteRenderer == spriteRendererUp;
-+        spriteRendererDown.enabled = currentSpriteRenderer == spriteRendererDown;
-+        spriteRendererLeft.enabled = currentSpriteRenderer == spriteRendererLeft;
-+        spriteRendererRight.enabled = currentSpriteRenderer == spriteRendererRight;
-+        spriteRendererDead.enabled = currentSpriteRenderer == spriteRendererDead;
-+        activeSpriteRenderer = currentSpriteRenderer;
-+        activeSpriteRenderer.idle = newDir == Vector2.zero;
-+    }
-+
-+    private void OnTriggerEnter2D(Collider2D collision)
-+    {
-+        if (collision.gameObject.layer == LayerMask.NameToLayer("Explosion"))
-+        {
-+            DeadSequence();
-+        }
-+    }
-+
-+    private void DeadSequence()
-+    {
-+        StopAllCoroutines();
-+        this.enabled = false;
-+        spriteRendererUp.enabled = false;
-+        spriteRendererDown.enabled = false;
-+        spriteRendererLeft.enabled = false;
-+        spriteRendererRight.enabled = false;
-+        spriteRendererDead.enabled = true;
-+        Invoke(nameof(OnDeathFinished), deathTime);
-+    }
-+
-+    private void OnDeathFinished()
-+    {
-+        gameObject.SetActive(false);
-+    }
-+}
+public class EnemyController : MonoBehaviour
+{
+    [Header("Components")]
+    public AnimatedSpriteRenderer spriteRendererUp;
+    public AnimatedSpriteRenderer spriteRendererDown;
+    public AnimatedSpriteRenderer spriteRendererLeft;
+    public AnimatedSpriteRenderer spriteRendererRight;
+    public AnimatedSpriteRenderer spriteRendererDead;
+
+    [Header("Movement Settings")]
+    public float speed = 3f;
+    public float decisionTime = 2f;
+    public float followRange = 5f;
+    public float deathTime = 1.25f;
+
+    public Rigidbody2D Rigidbody { get; private set; }
+
+    private Vector2 direction = Vector2.down;
+    private AnimatedSpriteRenderer activeSpriteRenderer;
+    private Transform playerTarget;
+
+    private void Awake()
+    {
+        Rigidbody = GetComponent<Rigidbody2D>();
+        activeSpriteRenderer = spriteRendererDown;
+
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+            playerTarget = player.transform;
+    }
+
+    private void OnEnable()
+    {
+        StartCoroutine(ChooseDirection());
+    }
+
+    private void Update()
+    {
+        UpdateSpriteDirection();
+    }
+
+    private void FixedUpdate()
+    {
+        Vector2 movement = direction * speed * Time.fixedDeltaTime;
+        Rigidbody.MovePosition(Rigidbody.position + movement);
+    }
+
+    private IEnumerator ChooseDirection()
+    {
+        while (enabled)
+        {
+            yield return new WaitForSeconds(decisionTime);
+
+            Vector2 newDirection = Vector2.zero;
+
+            if (playerTarget != null && Vector2.Distance(transform.position, playerTarget.position) <= followRange)
+            {
+                Vector2 toPlayer = (playerTarget.position - transform.position).normalized;
+                newDirection = Mathf.Abs(toPlayer.x) > Mathf.Abs(toPlayer.y)
+                    ? (toPlayer.x > 0 ? Vector2.right : Vector2.left)
+                    : (toPlayer.y > 0 ? Vector2.up : Vector2.down);
+            }
+            else
+            {
+                newDirection = RandomDirection();
+            }
+
+            direction = newDirection;
+        }
+    }
+
+    private Vector2 RandomDirection()
+    {
+        switch (Random.Range(0, 4))
+        {
+            case 0: return Vector2.up;
+            case 1: return Vector2.down;
+            case 2: return Vector2.left;
+            default: return Vector2.right;
+        }
+    }
+
+    private void UpdateSpriteDirection()
+    {
+        if (direction == Vector2.up)
+            SetDirection(spriteRendererUp);
+        else if (direction == Vector2.down)
+            SetDirection(spriteRendererDown);
+        else if (direction == Vector2.left)
+            SetDirection(spriteRendererLeft);
+        else if (direction == Vector2.right)
+            SetDirection(spriteRendererRight);
+        else
+            SetDirection(activeSpriteRenderer, Vector2.zero);
+    }
+
+    private void SetDirection(AnimatedSpriteRenderer renderer, Vector2? overrideDir = null)
+    {
+        Vector2 dirToSet = overrideDir ?? direction;
+
+        spriteRendererUp.enabled = renderer == spriteRendererUp;
+        spriteRendererDown.enabled = renderer == spriteRendererDown;
+        spriteRendererLeft.enabled = renderer == spriteRendererLeft;
+        spriteRendererRight.enabled = renderer == spriteRendererRight;
+        spriteRendererDead.enabled = renderer == spriteRendererDead;
+
+        activeSpriteRenderer = renderer;
+        activeSpriteRenderer.idle = dirToSet == Vector2.zero;
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Explosion"))
+        {
+            StartDeathSequence();
+        }
+    }
+
+    private void StartDeathSequence()
+    {
+        StopAllCoroutines();
+        enabled = false;
+
+        // Disable all normal renderers
+        spriteRendererUp.enabled = false;
+        spriteRendererDown.enabled = false;
+        spriteRendererLeft.enabled = false;
+        spriteRendererRight.enabled = false;
+
+        // Enable dead animation
+        spriteRendererDead.enabled = true;
+
+        Invoke(nameof(OnDeathFinished), deathTime);
+    }
+
+    private void OnDeathFinished()
+    {
+        gameObject.SetActive(false);
+    }
+}
