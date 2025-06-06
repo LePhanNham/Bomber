@@ -24,6 +24,8 @@ public class PlayerController : MonoBehaviour
     private AnimatedSpriteRenderer activeSpriteRenderer;
     public AnimatedSpriteRenderer spriteRendererDead;
 
+    private bool levelComplete = false;
+
     [Header("UI")]
     public Button btnRestart;
     private void OnEnable()
@@ -57,6 +59,13 @@ public class PlayerController : MonoBehaviour
         else
         {
             SetDirection(Vector2.zero,activeSpriteRenderer);
+        }
+
+        if (!levelComplete && GameObject.FindGameObjectsWithTag("Enemy").Length == 0)
+        {
+            levelComplete = true;
+            if (LevelManager.Instance != null)
+                LevelManager.Instance.LoadNextLevel();
         }
     }
     private void FixedUpdate()
@@ -115,6 +124,9 @@ public class PlayerController : MonoBehaviour
     }
     private void LoadControl()
     {
-        SceneManager.LoadScene(0);
+        if (LevelManager.Instance != null)
+            LevelManager.Instance.RestartLevel();
+        else
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
