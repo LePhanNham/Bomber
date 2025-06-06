@@ -7,7 +7,7 @@ using UnityEngine.Tilemaps;
 public class BombController : MonoBehaviour
 {
     private BombController instance;
-    public BombController instant => instance;
+    public BombController Instance => instance;
     private void Awake()
     {
         if (instance != null) return;
