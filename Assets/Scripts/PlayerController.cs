@@ -64,6 +64,8 @@ public class PlayerController : MonoBehaviour
         if (!levelComplete && GameObject.FindGameObjectsWithTag("Enemy").Length == 0)
         {
             levelComplete = true;
+            if (ProgressManager.Instance != null)
+                ProgressManager.Instance.UnlockNext(SceneManager.GetActiveScene().name);
             if (LevelManager.Instance != null)
                 LevelManager.Instance.LoadNextLevel();
         }
